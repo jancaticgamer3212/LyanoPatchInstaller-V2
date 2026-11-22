@@ -15,8 +15,7 @@ echo "== aapt2 link"
   -I "$PLATFORM" \
   --manifest AndroidManifest.xml \
   -A assets \
-  --min-sdk-version 21 --target-sdk-version 22 \
-  --version-code 1 --version-name 1.0
+  --min-sdk-version 21 --target-sdk-version 22
 
 echo "== javac"
 javac -source 8 -target 8 -bootclasspath "$PLATFORM" -d build/classes \

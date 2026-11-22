@@ -1,2 +1,4 @@
 build/
 *.idsig
+tools/*
+!tools/axml_patch.py

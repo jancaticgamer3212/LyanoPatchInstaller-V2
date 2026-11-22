@@ -1,9 +1,11 @@
 package com.qoder.playstoreswap;
 
 import android.app.Activity;
-import android.graphics.Color;
+import android.content.Intent;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
@@ -17,6 +19,7 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
@@ -28,7 +31,9 @@ public class MainActivity extends Activity {
     private TextView logView;
     private Button goButton;
     private RadioGroup versionGroup;
+    private RadioGroup methodGroup;
     private String selectedVersion = "5.12.10";
+    private boolean rootMethod = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,17 +54,49 @@ public class MainActivity extends Activity {
         root.addView(title);
 
         TextView desc = new TextView(this);
-        desc.setText("Remounts /system read-write, uninstalls the current Play Store and wipes its data, "
-                + "installs the selected patched build from the Lyano Android Play Store Revival as a "
-                + "system app in /system/priv-app/Phonesky (old .odex files in that folder are removed), "
-                + "then reboots.\n\nRequires root (su).");
+        desc.setText("Choose an install method:\n"
+                + "\u2022 Root: replaces the real Play Store in /system/priv-app/Phonesky, "
+                + "wipes its data and reboots.\n"
+                + "\u2022 No root: installs the build as a separate normal app "
+                + "(com.lyano.playstore.patch), so the existing Play Store stays. Both can coexist.");
         desc.setTextSize(14);
         desc.setTextColor(0xFF9AA7AD);
         desc.setPadding(0, dp(8), 0, 0);
         root.addView(desc);
 
+        TextView pickMethod = new TextView(this);
+        pickMethod.setText("Install method:");
+        pickMethod.setTextSize(14);
+        pickMethod.setTextColor(0xFFECF0F1);
+        pickMethod.setPadding(0, dp(12), 0, dp(2));
+        root.addView(pickMethod);
+
+        methodGroup = new RadioGroup(this);
+        methodGroup.setOrientation(RadioGroup.VERTICAL);
+        final String[] methods = {
+                "Root - replace system Play Store (reboot)",
+                "No root - install as second store"
+        };
+        for (int i = 0; i < methods.length; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(100 + i);
+            rb.setText(methods[i]);
+            rb.setTextColor(0xFFD5DDE0);
+            methodGroup.addView(rb);
+        }
+        ((RadioButton) methodGroup.getChildAt(0)).setChecked(true);
+        methodGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                rootMethod = checkedId == 100;
+                goButton.setText(rootMethod ? "Replace Play Store & Reboot" : "Install Second Play Store");
+                append("Method: " + methods[checkedId - 100] + "\n");
+            }
+        });
+        root.addView(methodGroup);
+
         TextView pick = new TextView(this);
-        pick.setText("Patched Play Store build to install:");
+        pick.setText("Patched Play Store build:");
         pick.setTextSize(14);
         pick.setTextColor(0xFFECF0F1);
         pick.setPadding(0, dp(12), 0, dp(2));
@@ -109,43 +146,82 @@ public class MainActivity extends Activity {
         root.addView(goButton);
 
         setContentView(root);
-        append("Selected patched build is installed as a system app. Tap the button to continue.\n");
+        append("Root method is selected. Tap the button to continue.\n");
     }
 
     private void begin() {
         final String version = selectedVersion;
+        final boolean useRoot = rootMethod;
         goButton.setEnabled(false);
         versionGroup.setEnabled(false);
+        methodGroup.setEnabled(false);
         append("\nPreparing bundled APK (Play Store " + version + ")...\n");
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    String assetName = version + ".apk";
-                    File apk = new File(getCacheDir(), "playstore-" + assetName);
-                    InputStream in = getAssets().open(assetName);
-                    FileOutputStream apkOut = new FileOutputStream(apk);
-                    byte[] buf = new byte[64 * 1024];
-                    int n;
-                    while ((n = in.read(buf)) > 0) apkOut.write(buf, 0, n);
-                    in.close();
-                    apkOut.close();
-                    append("Bundled APK: Play Store " + version + ", " + (apk.length() / (1024 * 1024)) + " MB\n");
-
-                    File script = new File(getCacheDir(), "swap.sh");
-                    FileOutputStream out = new FileOutputStream(script);
-                    out.write(buildScript(apk.getAbsolutePath()).getBytes("UTF-8"));
-                    out.close();
-
-                    append("Requesting root...\n\n");
-                    runRoot("sh " + script.getAbsolutePath());
+                    if (useRoot) {
+                        runRootFlow(version);
+                    } else {
+                        runNoRootFlow(version);
+                    }
                 } catch (Exception e) {
                     append("\nERROR: " + e + "\n");
                 } finally {
                     enableButton();
                 }
             }
-        }, "swap-runner").start();
+        }, "install-runner").start();
+    }
+
+    private void runRootFlow(String version) throws IOException {
+        String assetName = version + ".apk";
+        File apk = new File(getCacheDir(), "playstore-" + assetName);
+        copyAsset(assetName, apk);
+        append("Bundled APK: Play Store " + version + ", " + (apk.length() / (1024 * 1024)) + " MB\n");
+
+        File script = new File(getCacheDir(), "swap.sh");
+        FileOutputStream out = new FileOutputStream(script);
+        out.write(buildScript(apk.getAbsolutePath()).getBytes("UTF-8"));
+        out.close();
+
+        append("Requesting root...\n\n");
+        runRoot("sh " + script.getAbsolutePath());
+    }
+
+    private void runNoRootFlow(String version) throws IOException {
+        String assetName = "clone-" + version + ".apk";
+        File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        if (dir == null) dir = new File(Environment.getExternalStorageDirectory(), "Download");
+        if (!dir.isDirectory() && !dir.mkdirs()) {
+            throw new IOException("cannot create " + dir);
+        }
+        File apk = new File(dir, "LyanoPlayStore-" + version + "-clone.apk");
+        copyAsset(assetName, apk);
+        append("Second-store APK: Play Store " + version + ", " + (apk.length() / (1024 * 1024)) + " MB\n");
+        append("Package: com.lyano.playstore.patch (separate from the real Play Store)\n");
+        append("Saved to: " + apk.getAbsolutePath() + "\n");
+        append("Opening the system package installer...\n");
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(Uri.fromFile(apk), "application/vnd.android.package-archive");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(intent);
+
+        append("\nTap \"Install\" in the installer and wait for it to finish.\n");
+        append("If Play Protect blocks it, tap \"Install anyway\".\n");
+        append("If nothing opens, allow \"Unknown sources\" in Settings > Security, then retry.\n");
+        append("\nNote: as a normal app the clone cannot install or update other apps.\n");
+    }
+
+    private void copyAsset(String assetName, File dest) throws IOException {
+        InputStream in = getAssets().open(assetName);
+        FileOutputStream out = new FileOutputStream(dest);
+        byte[] buf = new byte[64 * 1024];
+        int n;
+        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        in.close();
+        out.close();
     }
 
     private String buildScript(String apkPath) {
@@ -229,6 +305,7 @@ public class MainActivity extends Activity {
             public void run() {
                 goButton.setEnabled(true);
                 versionGroup.setEnabled(true);
+                methodGroup.setEnabled(true);
             }
         });
     }
