@@ -139,6 +139,19 @@ public class MainActivity extends Activity {
         });
         root.addView(versionGroup);
 
+        goButton = new Button(this);
+        goButton.setText("Replace Play Store & Reboot");
+        goButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                begin();
+            }
+        });
+        LinearLayout.LayoutParams goLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        goLp.topMargin = dp(12);
+        root.addView(goButton, goLp);
+
         restoreButton = new Button(this);
         restoreButton.setText("Restore Original Play Store");
         restoreButton.setOnClickListener(new View.OnClickListener() {
@@ -149,7 +162,7 @@ public class MainActivity extends Activity {
         });
         LinearLayout.LayoutParams restoreLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        restoreLp.topMargin = dp(12);
+        restoreLp.topMargin = dp(4);
         root.addView(restoreButton, restoreLp);
 
         logView = new TextView(this);
@@ -164,16 +177,6 @@ public class MainActivity extends Activity {
         logLp.topMargin = dp(12);
         logLp.bottomMargin = dp(12);
         root.addView(logView, logLp);
-
-        goButton = new Button(this);
-        goButton.setText("Replace Play Store & Reboot");
-        goButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                begin();
-            }
-        });
-        root.addView(goButton);
 
         setContentView(root);
         append("Root method is selected. The current Play Store is backed up before it is replaced.\n");
