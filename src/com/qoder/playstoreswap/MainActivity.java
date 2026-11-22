@@ -10,6 +10,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -25,6 +27,8 @@ public class MainActivity extends Activity {
 
     private TextView logView;
     private Button goButton;
+    private RadioGroup versionGroup;
+    private String selectedVersion = "5.12.10";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,12 +50,40 @@ public class MainActivity extends Activity {
 
         TextView desc = new TextView(this);
         desc.setText("Remounts /system read-write, uninstalls the current Play Store and wipes its data, "
-                + "installs the bundled 5.12.10 build as a system app in /system/priv-app/Phonesky "
-                + "(old .odex files in that folder are removed), then reboots.\n\nRequires root (su).");
+                + "installs the selected patched build from the Lyano Android Play Store Revival as a "
+                + "system app in /system/priv-app/Phonesky (old .odex files in that folder are removed), "
+                + "then reboots.\n\nRequires root (su).");
         desc.setTextSize(14);
         desc.setTextColor(0xFF9AA7AD);
         desc.setPadding(0, dp(8), 0, 0);
         root.addView(desc);
+
+        TextView pick = new TextView(this);
+        pick.setText("Patched Play Store build to install:");
+        pick.setTextSize(14);
+        pick.setTextColor(0xFFECF0F1);
+        pick.setPadding(0, dp(12), 0, dp(2));
+        root.addView(pick);
+
+        versionGroup = new RadioGroup(this);
+        versionGroup.setOrientation(RadioGroup.VERTICAL);
+        final String[] versions = {"5.12.10", "4.4.22", "3.4.7"};
+        for (int i = 0; i < versions.length; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(i + 1);
+            rb.setText(versions[i] + (i == 0 ? "  (newest)" : i == 1 ? "  (older)" : "  (oldest)"));
+            rb.setTextColor(0xFFD5DDE0);
+            versionGroup.addView(rb);
+        }
+        ((RadioButton) versionGroup.getChildAt(0)).setChecked(true);
+        versionGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                selectedVersion = versions[checkedId - 1];
+                append("Selected build: Play Store " + selectedVersion + "\n");
+            }
+        });
+        root.addView(versionGroup);
 
         logView = new TextView(this);
         logView.setTextSize(12);
@@ -77,27 +109,28 @@ public class MainActivity extends Activity {
         root.addView(goButton);
 
         setContentView(root);
-        append("Bundled Play Store 5.12.10 ready. Tap the button to continue.\n");
+        append("Selected patched build is installed as a system app. Tap the button to continue.\n");
     }
 
     private void begin() {
+        final String version = selectedVersion;
         goButton.setEnabled(false);
-        append("\nPreparing bundled APK...\n");
+        versionGroup.setEnabled(false);
+        append("\nPreparing bundled APK (Play Store " + version + ")...\n");
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    File apk = new File(getCacheDir(), "playstore.apk");
-                    if (!apk.exists() || apk.length() == 0) {
-                        InputStream in = getAssets().open("playstore.apk");
-                        FileOutputStream out = new FileOutputStream(apk);
-                        byte[] buf = new byte[64 * 1024];
-                        int n;
-                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                        in.close();
-                        out.close();
-                    }
-                    append("Bundled APK: " + (apk.length() / (1024 * 1024)) + " MB\n");
+                    String assetName = version + ".apk";
+                    File apk = new File(getCacheDir(), "playstore-" + assetName);
+                    InputStream in = getAssets().open(assetName);
+                    FileOutputStream apkOut = new FileOutputStream(apk);
+                    byte[] buf = new byte[64 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) > 0) apkOut.write(buf, 0, n);
+                    in.close();
+                    apkOut.close();
+                    append("Bundled APK: Play Store " + version + ", " + (apk.length() / (1024 * 1024)) + " MB\n");
 
                     File script = new File(getCacheDir(), "swap.sh");
                     FileOutputStream out = new FileOutputStream(script);
@@ -195,6 +228,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 goButton.setEnabled(true);
+                versionGroup.setEnabled(true);
             }
         });
     }
