@@ -15,14 +15,14 @@ echo "== aapt2 link"
   -I "$PLATFORM" \
   --manifest AndroidManifest.xml \
   -A assets \
-  --min-sdk-version 21 --target-sdk-version 22
+  --min-sdk-version 8 --target-sdk-version 22
 
 echo "== javac"
 javac -source 8 -target 8 -bootclasspath "$PLATFORM" -d build/classes \
   src/com/qoder/playstoreswap/MainActivity.java
 
 echo "== d8"
-java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --release --min-api 21 \
+java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --release --min-api 8 \
   --lib "$PLATFORM" --output build/dex $(find build/classes -name '*.class')
 
 echo "== add classes.dex"
