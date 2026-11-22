@@ -68,8 +68,8 @@ public class MainActivity extends Activity {
         header.addView(desc);
 
         TextView device = new TextView(this);
-        device.setText("Helper: Android 2.2+  \u00b7  Device: Android "
-                + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
+        device.setText("Device: Android " + Build.VERSION.RELEASE
+                + " (API " + Build.VERSION.SDK_INT + ")");
         device.setTextSize(13);
         device.setTextColor(0xFF7FD1A8);
         device.setPadding(0, dp(4), 0, 0);

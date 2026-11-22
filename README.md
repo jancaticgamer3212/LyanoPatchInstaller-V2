@@ -8,8 +8,15 @@ Installs a patched **Android Play Store Revival** client from
 - **No root** — installs the same build as an ordinary app under the renamed package
   `com.lyano.playstore.patch`, so the existing Play Store stays installed. Both stores coexist.
 
-The helper runs on **Android 2.2+ (API 8)**. Each build's own minimum Android version is shown in
-the app, and all three bundled builds work with either method.
+The helper ships in two builds with the same features:
+
+| APK                                   | Minimum Android        |
+|---------------------------------------|------------------------|
+| `LyanoPatchInstaller-V2.apk`          | 4.0 Ice Cream Sandwich (API 14) |
+| `LyanoPatchInstaller-V2-android2.apk` | 2.2 Froyo (API 8)      |
+
+Each Play Store build's own minimum Android version is shown in the app, and all three bundled
+builds work with either method.
 
 ## Root method
 
@@ -69,15 +76,18 @@ also displays the current device's Android version.
 
 ## Requirements
 
-- Android 2.2+ (API 8) device; built and tested against Android 5.1.1 (Galaxy S6 edge / Galaxy A3)
+- Android 4.0+ (API 14) for the default build, or Android 2.2+ (API 8) for
+  `LyanoPatchInstaller-V2-android2.apk`; built and tested against Android 5.1.1 (Galaxy S6 edge /
+  Galaxy A3)
 - Root with a working `su` **only** for the root method
 - Enough free space on `/system` for the selected APK (root method)
 - Recommended: a TWRP backup of `/system` before using the root method
 
 ## Usage
 
-1. Install `LyanoPatchInstaller-V2.apk` (enable "Unknown sources" or use
-   `adb install -r LyanoPatchInstaller-V2.apk`)
+1. Install the matching APK (enable "Unknown sources" or use `adb install -r <apk>`)
+   - Android 4.0+: `LyanoPatchInstaller-V2.apk`
+   - Android 2.2–3.2: `LyanoPatchInstaller-V2-android2.apk`
 2. Open **LyanoPatchInstaller V2**
 3. Choose **Root** or **No root**
 4. Select the patched build (each line shows its minimum Android version and era)
@@ -95,10 +105,14 @@ Built without Gradle, using the Android SDK build tools directly:
 ```bash
 # edit SDK paths at the top of build.sh if needed
 bash make-clones.sh     # builds + signs assets/clone-<version>.apk for all three builds
-./build.sh              # packages the helper app -> LyanoPatchInstaller-V2.apk
+./build.sh              # default Android 4 build -> LyanoPatchInstaller-V2.apk
+MIN_SDK=8 OUT=LyanoPatchInstaller-V2-android2.apk ./build.sh   # Android 2.2 build
 ```
 
 `build.sh` runs `aapt2 link` → `javac` → `d8` → zips `classes.dex` → `zipalign` → `apksigner`.
+`MIN_SDK` (default 14) picks the minimum Android version; `OUT` picks the output filename. For an
+`MIN_SDK` below the manifest's, the script links against a temporary copy of the manifest with the
+lower value.
 `make-clones.sh` uses `tools/axml_patch.py`, which binary-patches `AndroidManifest.xml` inside the
 APK (package name, versionCode, permissions, provider authorities, component names) without
 rebuilding resources, then re-signs with the local debug keystore.

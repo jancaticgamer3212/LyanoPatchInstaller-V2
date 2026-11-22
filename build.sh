@@ -7,22 +7,33 @@ BT="$SDK/build-tools/35.0.0"
 PLATFORM="$SDK/platforms/android-35/android.jar"
 KS="$HOME/.android/debug.keystore"
 
+MIN_SDK="${MIN_SDK:-14}"
+OUT="${OUT:-LyanoPatchInstaller-V2.apk}"
+
 rm -rf build
 mkdir -p build/classes build/dex
 
-echo "== aapt2 link"
+MANIFEST=AndroidManifest.xml
+MANIFEST_SDK=$(sed -n 's/.*android:minSdkVersion="\([0-9]*\)".*/\1/p' AndroidManifest.xml)
+if [ "$MIN_SDK" != "$MANIFEST_SDK" ]; then
+  sed "s/android:minSdkVersion=\"$MANIFEST_SDK\"/android:minSdkVersion=\"$MIN_SDK\"/" \
+    AndroidManifest.xml > build/AndroidManifest.xml
+  MANIFEST=build/AndroidManifest.xml
+fi
+
+echo "== aapt2 link (minSdk $MIN_SDK)"
 "$BT/aapt2.exe" link -o build/app.unsigned.apk \
   -I "$PLATFORM" \
-  --manifest AndroidManifest.xml \
+  --manifest "$MANIFEST" \
   -A assets \
-  --min-sdk-version 8 --target-sdk-version 22
+  --min-sdk-version "$MIN_SDK" --target-sdk-version 22
 
 echo "== javac"
 javac -source 8 -target 8 -bootclasspath "$PLATFORM" -d build/classes \
   src/com/qoder/playstoreswap/MainActivity.java
 
 echo "== d8"
-java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --release --min-api 8 \
+java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --release --min-api "$MIN_SDK" \
   --lib "$PLATFORM" --output build/dex $(find build/classes -name '*.class')
 
 echo "== add classes.dex"
@@ -37,12 +48,12 @@ echo "== zipalign"
 "$BT/zipalign.exe" -f 4 build/app.dex.apk build/app.aligned.apk
 
 echo "== sign"
-rm -f LyanoPatchInstaller-V2.apk
+rm -f "$OUT"
 java -jar "$BT/lib/apksigner.jar" sign \
   --ks "$KS" --ks-pass pass:android --key-pass pass:android \
   --ks-key-alias androiddebugkey \
-  --out LyanoPatchInstaller-V2.apk build/app.aligned.apk
+  --out "$OUT" build/app.aligned.apk
 
 echo "== verify"
-java -jar "$BT/lib/apksigner.jar" verify --verbose LyanoPatchInstaller-V2.apk | head -6
-ls -l LyanoPatchInstaller-V2.apk
+java -jar "$BT/lib/apksigner.jar" verify --verbose "$OUT" | head -6
+ls -l "$OUT"
