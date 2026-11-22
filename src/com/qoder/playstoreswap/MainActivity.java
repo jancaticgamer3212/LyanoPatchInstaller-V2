@@ -1,8 +1,6 @@
 package com.qoder.playstoreswap;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -17,6 +15,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -33,7 +32,6 @@ public class MainActivity extends Activity {
 
     private TextView logView;
     private Button goButton;
-    private Button restoreButton;
     private RadioGroup versionGroup;
     private RadioGroup methodGroup;
     private String selectedVersion = "5.12.10";
@@ -51,37 +49,38 @@ public class MainActivity extends Activity {
         root.setPadding(pad, pad, pad, pad);
         root.setBackgroundColor(0xFF10161A);
 
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+
         TextView title = new TextView(this);
         title.setText("LyanoPatchInstaller V2");
         title.setTextSize(20);
         title.setTextColor(0xFFECF0F1);
-        root.addView(title);
+        header.addView(title);
 
         TextView desc = new TextView(this);
-        desc.setText("Choose an install method:\n"
-                + "\u2022 Root: backs up the current Play Store, replaces it in /system, "
-                + "wipes its data and reboots.\n"
-                + "\u2022 No root: installs the build as a separate normal app "
-                + "(com.lyano.playstore.patch), so the existing Play Store stays. Both can coexist.");
+        desc.setText("\u2022 Root: replaces the system Play Store and reboots.\n"
+                + "\u2022 No root: installs a second store (com.lyano.playstore.patch) "
+                + "next to the existing one.");
         desc.setTextSize(14);
         desc.setTextColor(0xFF9AA7AD);
-        desc.setPadding(0, dp(8), 0, 0);
-        root.addView(desc);
+        desc.setPadding(0, dp(4), 0, 0);
+        header.addView(desc);
 
         TextView device = new TextView(this);
-        device.setText("This helper: Android 2.2+ (API 8)\nThis device: Android "
+        device.setText("Helper: Android 2.2+  \u00b7  Device: Android "
                 + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")");
         device.setTextSize(13);
         device.setTextColor(0xFF7FD1A8);
-        device.setPadding(0, dp(6), 0, 0);
-        root.addView(device);
+        device.setPadding(0, dp(4), 0, 0);
+        header.addView(device);
 
         TextView pickMethod = new TextView(this);
         pickMethod.setText("Install method:");
         pickMethod.setTextSize(14);
         pickMethod.setTextColor(0xFFECF0F1);
         pickMethod.setPadding(0, dp(12), 0, dp(2));
-        root.addView(pickMethod);
+        header.addView(pickMethod);
 
         methodGroup = new RadioGroup(this);
         methodGroup.setOrientation(RadioGroup.VERTICAL);
@@ -105,14 +104,14 @@ public class MainActivity extends Activity {
                 append("Method: " + methods[checkedId - 100] + "\n");
             }
         });
-        root.addView(methodGroup);
+        header.addView(methodGroup);
 
         TextView pick = new TextView(this);
         pick.setText("Patched Play Store build (minimum Android version):");
         pick.setTextSize(14);
         pick.setTextColor(0xFFECF0F1);
         pick.setPadding(0, dp(12), 0, dp(2));
-        root.addView(pick);
+        header.addView(pick);
 
         versionGroup = new RadioGroup(this);
         versionGroup.setOrientation(RadioGroup.VERTICAL);
@@ -137,7 +136,13 @@ public class MainActivity extends Activity {
                 append("Selected build: Play Store " + selectedVersion + "\n");
             }
         });
-        root.addView(versionGroup);
+        header.addView(versionGroup);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(header);
+        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f);
+        root.addView(scroll, scrollLp);
 
         goButton = new Button(this);
         goButton.setText("Replace Play Store & Reboot");
@@ -151,19 +156,6 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         goLp.topMargin = dp(12);
         root.addView(goButton, goLp);
-
-        restoreButton = new Button(this);
-        restoreButton.setText("Restore Original Play Store");
-        restoreButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                confirmRestore();
-            }
-        });
-        LinearLayout.LayoutParams restoreLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        restoreLp.topMargin = dp(4);
-        root.addView(restoreButton, restoreLp);
 
         logView = new TextView(this);
         logView.setTextSize(12);
@@ -179,14 +171,13 @@ public class MainActivity extends Activity {
         root.addView(logView, logLp);
 
         setContentView(root);
-        append("Root method is selected. The current Play Store is backed up before it is replaced.\n");
+        append("Root method is selected. Tap the button to continue.\n");
     }
 
     private void begin() {
         final String version = selectedVersion;
         final boolean useRoot = rootMethod;
         goButton.setEnabled(false);
-        restoreButton.setEnabled(false);
         versionGroup.setEnabled(false);
         methodGroup.setEnabled(false);
         append("\nPreparing bundled APK (Play Store " + version + ")...\n");
@@ -206,42 +197,6 @@ public class MainActivity extends Activity {
                 }
             }
         }, "install-runner").start();
-    }
-
-    private void confirmRestore() {
-        new AlertDialog.Builder(this)
-                .setTitle("Restore original Play Store?")
-                .setMessage("The patched Play Store is removed and the APK saved in "
-                        + "/sdcard/LyanoPatchInstaller/backup is put back as the system app. "
-                        + "Play Store data is wiped and the phone reboots.")
-                .setPositiveButton("Restore", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        restore();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void restore() {
-        goButton.setEnabled(false);
-        restoreButton.setEnabled(false);
-        versionGroup.setEnabled(false);
-        methodGroup.setEnabled(false);
-        append("\nPreparing restore...\n");
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    runScript("restore.sh", buildRestoreScript());
-                } catch (Exception e) {
-                    append("\nERROR: " + e + "\n");
-                } finally {
-                    enableButton();
-                }
-            }
-        }, "restore-runner").start();
     }
 
     private void runRootFlow(String version) throws IOException {
@@ -298,7 +253,7 @@ public class MainActivity extends Activity {
 
     private String buildScript(String apkPath) {
         return ""
-                + "echo \"[1/6] Remounting /system read-write\"\n"
+                + "echo \"[1/5] Remounting /system read-write\"\n"
                 + "mount -o rw,remount /system 2>/dev/null || mount -o remount,rw /system 2>/dev/null || busybox mount -o remount,rw /system 2>/dev/null || mount -o remount,rw \"$(mount | awk '$3==\"/system\"{print $1; exit}')\" /system 2>/dev/null\n"
                 + "if ! touch /system/.rwtest 2>/dev/null; then\n"
                 + "  echo \"ERROR: /system is still read-only. Aborting.\"\n"
@@ -306,32 +261,7 @@ public class MainActivity extends Activity {
                 + "fi\n"
                 + "rm -f /system/.rwtest\n"
                 + "\n"
-                + "echo \"[2/6] Backing up the current Play Store\"\n"
-                + "BK=/sdcard/LyanoPatchInstaller/backup\n"
-                + "mkdir -p \"$BK\" 2>/dev/null\n"
-                + "if [ -f \"$BK/Phonesky.apk\" ]; then\n"
-                + "  echo \"Existing backup kept: $BK/Phonesky.apk\"\n"
-                + "else\n"
-                + "  SRC=\"\"\n"
-                + "  for p in /system/priv-app/Phonesky/Phonesky.apk /system/priv-app/Phonesky.apk /system/app/Phonesky.apk /system/app/Vending.apk /data/app/com.android.vending-*.apk; do\n"
-                + "    if [ -f \"$p\" ]; then SRC=\"$p\"; break; fi\n"
-                + "  done\n"
-                + "  if [ -z \"$SRC\" ]; then\n"
-                + "    echo \"WARNING: original Play Store APK not found; no backup was made.\"\n"
-                + "  else\n"
-                + "    if cat \"$SRC\" > \"$BK/Phonesky.apk.tmp\" 2>/dev/null; then\n"
-                + "      mv \"$BK/Phonesky.apk.tmp\" \"$BK/Phonesky.apk\"\n"
-                + "      echo \"path=$SRC\" > \"$BK/backup.info\"\n"
-                + "      echo \"Saved: $SRC -> $BK/Phonesky.apk\"\n"
-                + "    else\n"
-                + "      rm -f \"$BK/Phonesky.apk.tmp\"\n"
-                + "      echo \"ERROR: could not write the backup to $BK. Aborting.\"\n"
-                + "      exit 1\n"
-                + "    fi\n"
-                + "  fi\n"
-                + "fi\n"
-                + "\n"
-                + "echo \"[3/6] Uninstalling existing Play Store\"\n"
+                + "echo \"[2/5] Uninstalling existing Play Store\"\n"
                 + "pm uninstall com.android.vending 2>&1\n"
                 + "rm -rf /data/app/com.android.vending-*\n"
                 + "rm -rf /data/data/com.android.vending\n"
@@ -340,7 +270,7 @@ public class MainActivity extends Activity {
                 + "rm -rf /system/priv-app/Phonesky /system/priv-app/Phonesky.apk /system/priv-app/Phonesky.odex\n"
                 + "rm -rf /system/app/Phonesky.apk /system/app/Phonesky.odex /system/app/Vending.apk /system/app/Vending.odex\n"
                 + "\n"
-                + "echo \"[4/6] Installing bundled APK as the system Play Store\"\n"
+                + "echo \"[3/5] Installing bundled APK as the system Play Store\"\n"
                 + "if [ -d /system/priv-app ]; then\n"
                 + "  TARGET=/system/priv-app/Phonesky/Phonesky.apk\n"
                 + "else\n"
@@ -363,78 +293,12 @@ public class MainActivity extends Activity {
                 + "  exit 1\n"
                 + "fi\n"
                 + "\n"
-                + "echo \"[5/6] Fixing SELinux context\"\n"
+                + "echo \"[4/5] Fixing SELinux context\"\n"
                 + "restorecon -R /system/priv-app/Phonesky 2>/dev/null || chcon u:object_r:system_file:s0 \"$TARGET\" 2>/dev/null\n"
                 + "ls -l \"$TARGET\"\n"
                 + "sync\n"
                 + "\n"
-                + "echo \"[6/6] Rebooting\"\n"
-                + "reboot\n";
-    }
-
-    private String buildRestoreScript() {
-        return ""
-                + "echo \"[1/5] Remounting /system read-write\"\n"
-                + "mount -o rw,remount /system 2>/dev/null || mount -o remount,rw /system 2>/dev/null || busybox mount -o remount,rw /system 2>/dev/null || mount -o remount,rw \"$(mount | awk '$3==\"/system\"{print $1; exit}')\" /system 2>/dev/null\n"
-                + "if ! touch /system/.rwtest 2>/dev/null; then\n"
-                + "  echo \"ERROR: /system is still read-only. Aborting.\"\n"
-                + "  exit 1\n"
-                + "fi\n"
-                + "rm -f /system/.rwtest\n"
-                + "\n"
-                + "echo \"[2/5] Checking backup\"\n"
-                + "BK=/sdcard/LyanoPatchInstaller/backup\n"
-                + "if [ ! -s \"$BK/Phonesky.apk\" ]; then\n"
-                + "  echo \"ERROR: no backup found at $BK/Phonesky.apk\"\n"
-                + "  echo \"Use the root install method once first; it backs up the Play Store before replacing it.\"\n"
-                + "  exit 1\n"
-                + "fi\n"
-                + "echo \"Backup: $BK/Phonesky.apk\"\n"
-                + "\n"
-                + "echo \"[3/5] Removing the current Play Store\"\n"
-                + "pm uninstall com.android.vending 2>&1\n"
-                + "rm -rf /data/app/com.android.vending-*\n"
-                + "rm -rf /data/data/com.android.vending\n"
-                + "rm -rf /data/dalvik-cache/*com.android.vending*\n"
-                + "rm -rf /data/dalvik-cache/*/*com.android.vending*\n"
-                + "rm -rf /system/priv-app/Phonesky /system/priv-app/Phonesky.apk /system/priv-app/Phonesky.odex\n"
-                + "rm -rf /system/app/Phonesky.apk /system/app/Phonesky.odex /system/app/Vending.apk /system/app/Vending.odex\n"
-                + "\n"
-                + "echo \"[4/5] Restoring backup\"\n"
-                + "TARGET=\"\"\n"
-                + "while read line; do\n"
-                + "  case \"$line\" in\n"
-                + "    path=/system/*) TARGET=\"${line#path=}\" ;;\n"
-                + "  esac\n"
-                + "done < \"$BK/backup.info\" 2>/dev/null\n"
-                + "if [ -z \"$TARGET\" ]; then\n"
-                + "  if [ -d /system/priv-app ]; then\n"
-                + "    TARGET=/system/priv-app/Phonesky/Phonesky.apk\n"
-                + "  else\n"
-                + "    TARGET=/system/app/Phonesky.apk\n"
-                + "  fi\n"
-                + "fi\n"
-                + "echo \"Target: $TARGET\"\n"
-                + "case \"$TARGET\" in\n"
-                + "  /system/priv-app/*) mkdir -p /system/priv-app/Phonesky 2>/dev/null ;;\n"
-                + "  *) mkdir -p /system/app 2>/dev/null ;;\n"
-                + "esac\n"
-                + "if ! cat \"$BK/Phonesky.apk\" > \"$TARGET\" 2>/dev/null; then\n"
-                + "  echo \"ERROR: could not write $TARGET (out of space?). Aborting.\"\n"
-                + "  exit 1\n"
-                + "fi\n"
-                + "chmod 755 /system/priv-app/Phonesky 2>/dev/null\n"
-                + "chmod 644 \"$TARGET\"\n"
-                + "chown 0:0 \"$TARGET\"\n"
-                + "if [ ! -s \"$TARGET\" ]; then\n"
-                + "  echo \"ERROR: restored file is empty. Aborting.\"\n"
-                + "  exit 1\n"
-                + "fi\n"
-                + "\n"
-                + "echo \"[5/5] Fixing SELinux context and rebooting\"\n"
-                + "restorecon -R /system/priv-app/Phonesky 2>/dev/null || chcon u:object_r:system_file:s0 \"$TARGET\" 2>/dev/null\n"
-                + "ls -l \"$TARGET\"\n"
-                + "sync\n"
+                + "echo \"[5/5] Rebooting\"\n"
                 + "reboot\n";
     }
 
@@ -478,7 +342,6 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 goButton.setEnabled(true);
-                restoreButton.setEnabled(true);
                 versionGroup.setEnabled(true);
                 methodGroup.setEnabled(true);
             }

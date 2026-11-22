@@ -3,8 +3,8 @@
 Installs a patched **Android Play Store Revival** client from
 [Lyano Market](https://market.lyano.ovh/), with two methods:
 
-- **Root** — backs up the current Play Store, replaces it in `/system`, removes the old
-  `.odex` files, wipes its data and reboots.
+- **Root** — replaces the stock Play Store in `/system`, removes the old `.odex` files, wipes its
+  data and reboots.
 - **No root** — installs the same build as an ordinary app under the renamed package
   `com.lyano.playstore.patch`, so the existing Play Store stays installed. Both stores coexist.
 
@@ -17,25 +17,16 @@ Pick a build, choose **Root — replace system Play Store**, then tap
 **Replace Play Store & Reboot**. The app runs a root shell script that:
 
 1. Remounts `/system` read-write (with fallbacks for Samsung's block-device mount)
-2. Backs up the original Play Store APK to `/sdcard/LyanoPatchInstaller/backup/` (an existing
-   backup is never overwritten) and records its original path
-3. Uninstalls the current Play Store and wipes its data (`/data/app/com.android.vending-*`,
+2. Uninstalls the current Play Store and wipes its data (`/data/app/com.android.vending-*`,
    `/data/data/com.android.vending`, dalvik-cache entries)
-4. Deletes the stock APK (`/system/priv-app/Phonesky*` on Android 4.4+, `/system/app/Phonesky.apk`
+3. Deletes the stock APK (`/system/priv-app/Phonesky*` on Android 4.4+, `/system/app/Phonesky.apk`
    or `Vending.apk` on older versions, including `.odex` files) and copies the selected APK into
    place (`root:root 644`)
-5. Fixes the SELinux context with `restorecon` (fallback `chcon u:object_r:system_file:s0`)
-6. Syncs and reboots
+4. Fixes the SELinux context with `restorecon` (fallback `chcon u:object_r:system_file:s0`)
+5. Syncs and reboots
 
 The full script output is shown in the app, so a failure (e.g. `/system` stays read-only or
 runs out of space) is visible before anything is rebooted.
-
-### Restore original Play Store
-
-The **Restore Original Play Store** button (root) removes the installed Play Store, puts the
-backed-up APK back at its recorded path (or the default system path), fixes permissions and
-SELinux context, and reboots. The patched store's data is wiped; accounts live in Google Play
-services and are unaffected.
 
 ## No-root method
 
@@ -94,10 +85,8 @@ also displays the current device's Android version.
    - Root: grant the root prompt, wait for the log to finish, the device reboots (first boot takes
      a while while the new APK is optimized)
    - No root: confirm **Install** in the system installer; no reboot needed
-6. To undo a root install, tap **Restore Original Play Store** and confirm
 
-The helper app is debug-signed and standalone; it can be uninstalled afterwards. The backup in
-`/sdcard/LyanoPatchInstaller/backup/` stays until you delete it.
+The helper app is debug-signed and standalone; it can be uninstalled afterwards.
 
 ## Build
 
@@ -117,10 +106,9 @@ rebuilding resources, then re-signs with the local debug keystore.
 ## Notes / disclaimer
 
 - The root method modifies `/system` and wipes Play Store data (accounts themselves live in GMS
-  and are unaffected, but the store starts fresh). The original APK is backed up to
-  `/sdcard/LyanoPatchInstaller/backup/` first and can be restored from the app.
-- Restoring only reverts the system Play Store; a no-root clone (`com.lyano.playstore.patch`)
-  is left installed and has to be uninstalled separately.
+  and are unaffected, but the store starts fresh).
+- There is no in-app undo; reinstall the stock Play Store or restore a `/system` backup (TWRP) if
+  you want the original store back.
 - Unofficial and not affiliated with Google or Lyano. Use at your own risk; you are responsible
   for backing up your device.
 - A newer Play Store may later self-update into `/data/app`; that is normal and does not remove
