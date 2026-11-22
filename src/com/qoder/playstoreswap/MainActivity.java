@@ -139,6 +139,19 @@ public class MainActivity extends Activity {
         });
         root.addView(versionGroup);
 
+        restoreButton = new Button(this);
+        restoreButton.setText("Restore Original Play Store");
+        restoreButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                confirmRestore();
+            }
+        });
+        LinearLayout.LayoutParams restoreLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        restoreLp.topMargin = dp(12);
+        root.addView(restoreButton, restoreLp);
+
         logView = new TextView(this);
         logView.setTextSize(12);
         logView.setTextColor(0xFF7FD1A8);
@@ -161,19 +174,6 @@ public class MainActivity extends Activity {
             }
         });
         root.addView(goButton);
-
-        restoreButton = new Button(this);
-        restoreButton.setText("Restore Original Play Store");
-        restoreButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                confirmRestore();
-            }
-        });
-        LinearLayout.LayoutParams restoreLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        restoreLp.topMargin = dp(4);
-        root.addView(restoreButton, restoreLp);
 
         setContentView(root);
         append("Root method is selected. The current Play Store is backed up before it is replaced.\n");
