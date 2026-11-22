@@ -1,4 +1,4 @@
-# Play Store Swapper
+# LyanoPatchInstaller V2
 
 One-tap root tool that replaces the stock Google Play Store on Android 5.x with a patched
 **Android Play Store Revival** client from [Lyano Market](https://market.lyano.ovh/), installs it
@@ -45,8 +45,9 @@ rooted device.
 
 ## Usage
 
-1. Install `PlayStoreSwapper.apk` (enable "Unknown sources" or use `adb install -r PlayStoreSwapper.apk`)
-2. Open **Play Store Swapper** and grant the root prompt
+1. Install `LyanoPatchInstaller-V2.apk` (enable "Unknown sources" or use
+   `adb install -r LyanoPatchInstaller-V2.apk`)
+2. Open **LyanoPatchInstaller V2** and grant the root prompt
 3. Select the patched build you want (5.12.10, 4.4.22 or 3.4.7)
 4. Tap **Replace Play Store & Reboot**
 5. After the reboot the first boot takes a while (the new APK gets dex-optimized)
@@ -63,7 +64,7 @@ Built without Gradle, using the Android SDK build tools directly:
 ```
 
 The script runs `aapt2 link` → `javac` → `d8` → zips `classes.dex` → `zipalign` → `apksigner`,
-and produces `PlayStoreSwapper.apk` signed with the local debug keystore.
+and produces `LyanoPatchInstaller-V2.apk` signed with the local debug keystore.
 
 ## Notes / disclaimer
 

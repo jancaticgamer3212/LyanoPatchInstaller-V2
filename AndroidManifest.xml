@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.qoder.playstoreswap"
-    android:versionCode="2"
-    android:versionName="1.1">
+    android:versionCode="3"
+    android:versionName="2.0">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22" />
 
     <application
-        android:label="Play Store Swapper"
+        android:label="LyanoPatchInstaller V2"
         android:allowBackup="false"
         android:theme="@android:style/Theme.Material">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="Play Store Swapper">
+            android:label="LyanoPatchInstaller V2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

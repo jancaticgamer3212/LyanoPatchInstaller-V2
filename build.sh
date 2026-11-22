@@ -38,12 +38,12 @@ echo "== zipalign"
 "$BT/zipalign.exe" -f 4 build/app.dex.apk build/app.aligned.apk
 
 echo "== sign"
-rm -f PlayStoreSwapper.apk
+rm -f LyanoPatchInstaller-V2.apk
 java -jar "$BT/lib/apksigner.jar" sign \
   --ks "$KS" --ks-pass pass:android --key-pass pass:android \
   --ks-key-alias androiddebugkey \
-  --out PlayStoreSwapper.apk build/app.aligned.apk
+  --out LyanoPatchInstaller-V2.apk build/app.aligned.apk
 
 echo "== verify"
-java -jar "$BT/lib/apksigner.jar" verify --verbose PlayStoreSwapper.apk | head -6
-ls -l PlayStoreSwapper.apk
+java -jar "$BT/lib/apksigner.jar" verify --verbose LyanoPatchInstaller-V2.apk | head -6
+ls -l LyanoPatchInstaller-V2.apk

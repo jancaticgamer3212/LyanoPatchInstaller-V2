@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(0xFF10161A);
 
         TextView title = new TextView(this);
-        title.setText("Play Store \u2192 /system/priv-app/Phonesky");
+        title.setText("LyanoPatchInstaller V2");
         title.setTextSize(20);
         title.setTextColor(0xFFECF0F1);
         root.addView(title);
