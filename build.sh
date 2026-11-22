@@ -7,7 +7,7 @@ BT="$SDK/build-tools/35.0.0"
 PLATFORM="$SDK/platforms/android-35/android.jar"
 KS="$HOME/.android/debug.keystore"
 
-MIN_SDK="${MIN_SDK:-14}"
+MIN_SDK="${MIN_SDK:-21}"
 OUT="${OUT:-LyanoPatchInstaller-V2.apk}"
 
 rm -rf build
