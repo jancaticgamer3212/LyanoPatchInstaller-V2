@@ -11,7 +11,7 @@ MIN_SDK="${MIN_SDK:-21}"
 OUT="${OUT:-LyanoPatchInstaller-V2.apk}"
 
 rm -rf build
-mkdir -p build/classes build/dex
+mkdir -p build/classes build/dex build/gen
 
 MANIFEST=AndroidManifest.xml
 MANIFEST_SDK=$(sed -n 's/.*android:minSdkVersion="\([0-9]*\)".*/\1/p' AndroidManifest.xml)
@@ -21,16 +21,22 @@ if [ "$MIN_SDK" != "$MANIFEST_SDK" ]; then
   MANIFEST=build/AndroidManifest.xml
 fi
 
+echo "== aapt2 compile (res)"
+"$BT/aapt2.exe" compile --dir res -o build/res.zip
+
 echo "== aapt2 link (minSdk $MIN_SDK)"
 "$BT/aapt2.exe" link -o build/app.unsigned.apk \
   -I "$PLATFORM" \
   --manifest "$MANIFEST" \
   -A assets \
-  --min-sdk-version "$MIN_SDK" --target-sdk-version 22
+  --java build/gen \
+  --min-sdk-version "$MIN_SDK" --target-sdk-version 22 \
+  build/res.zip
 
 echo "== javac"
 javac -source 8 -target 8 -bootclasspath "$PLATFORM" -d build/classes \
-  src/com/qoder/playstoreswap/MainActivity.java
+  src/com/qoder/playstoreswap/MainActivity.java \
+  build/gen/com/qoder/playstoreswap/R.java
 
 echo "== d8"
 java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --release --min-api "$MIN_SDK" \

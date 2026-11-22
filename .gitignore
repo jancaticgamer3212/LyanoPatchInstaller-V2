@@ -2,3 +2,4 @@ build/
 *.idsig
 tools/*
 !tools/axml_patch.py
+!tools/make_icon.py

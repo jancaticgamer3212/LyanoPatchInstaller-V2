@@ -12,6 +12,9 @@ The helper runs on **Android 5.0+ (API 21)** and ships as one APK,
 `LyanoPatchInstaller-V2.apk`. Each Play Store build's own minimum Android version and era is shown
 in the app, and all three bundled builds work with either method.
 
+The UI uses the platform Material theme (cards, elevation, ripples, coloured app bar) with a
+rendered launcher icon; app icons live in `res/mipmap-*` and `res/mipmap-anydpi-v26`.
+
 ## Root method
 
 Pick a build, choose **Root — replace system Play Store**, then tap
@@ -98,11 +101,13 @@ bash make-clones.sh     # builds + signs assets/clone-<version>.apk for all thre
 ./build.sh              # packages the helper app -> LyanoPatchInstaller-V2.apk
 ```
 
-`build.sh` runs `aapt2 link` → `javac` → `d8` → zips `classes.dex` → `zipalign` → `apksigner`.
+`build.sh` runs `aapt2 compile res/` → `aapt2 link` (generates `R.java`) → `javac` → `d8` → zips
+`classes.dex` → `zipalign` → `apksigner`.
 `MIN_SDK` (default 21) can override the minimum Android version and `OUT` the output filename.
 `make-clones.sh` uses `tools/axml_patch.py`, which binary-patches `AndroidManifest.xml` inside the
 APK (package name, versionCode, permissions, provider authorities, component names) without
 rebuilding resources, then re-signs with the local debug keystore.
+`python tools/make_icon.py` regenerates the launcher icons (pure Python, no image libraries).
 
 ## Notes / disclaimer
 

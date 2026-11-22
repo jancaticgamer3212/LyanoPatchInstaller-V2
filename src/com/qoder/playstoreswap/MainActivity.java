@@ -2,16 +2,26 @@ package com.qoder.playstoreswap;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.method.ScrollingMovementMethod;
+import android.text.style.AbsoluteSizeSpan;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -27,6 +37,11 @@ import java.io.InputStreamReader;
 
 public class MainActivity extends Activity {
 
+    private static final int DISABLED_TEXT = 0x66FFFFFF;
+    private static final int RIPPLE_LIGHT = 0x1A000000;
+    private static final int RIPPLE_ON_PRIMARY = 0x40FFFFFF;
+    private static final int UNCHECKED_CONTROL = 0xFF9AA5A1;
+
     private final Handler ui = new Handler();
     private final StringBuilder logText = new StringBuilder();
 
@@ -37,63 +52,139 @@ public class MainActivity extends Activity {
     private String selectedVersion = "5.12.10";
     private boolean rootMethod = true;
 
+    private int colorPrimary;
+    private int colorText;
+    private int colorSecondary;
+    private int colorSelected;
+    private int colorSurface;
+    private int colorLogBg;
+    private int colorLogText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        int pad = dp(16);
+        colorPrimary = getResources().getColor(R.color.primary);
+        colorText = getResources().getColor(R.color.text_primary);
+        colorSecondary = getResources().getColor(R.color.text_secondary);
+        colorSelected = getResources().getColor(R.color.selected_row);
+        colorSurface = getResources().getColor(R.color.surface);
+        colorLogBg = getResources().getColor(R.color.log_bg);
+        colorLogText = getResources().getColor(R.color.log_text);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad, pad, pad);
-        root.setBackgroundColor(0xFF10161A);
+        root.setBackgroundColor(getResources().getColor(R.color.window_bg));
 
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.VERTICAL);
+        root.addView(buildAppBar(),
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(64)));
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(16), dp(16), dp(16), dp(4));
+        content.addView(buildMethodCard());
+        content.addView(buildVersionCard());
+        content.addView(buildDeviceCard());
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setClipToPadding(false);
+        scroll.addView(content, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
+        scroll.setPadding(0, 0, 0, dp(4));
+        root.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f));
+
+        goButton = buildPrimaryButton();
+        goButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                begin();
+            }
+        });
+        LinearLayout actions = new LinearLayout(this);
+        actions.setPadding(dp(16), dp(8), dp(16), dp(4));
+        actions.addView(goButton, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        root.addView(actions, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout output = new LinearLayout(this);
+        output.setOrientation(LinearLayout.VERTICAL);
+        output.setPadding(dp(16), dp(8), dp(16), dp(16));
+        output.addView(overline("Output"));
+        logView = new TextView(this);
+        logView.setTextSize(12);
+        logView.setTextColor(colorLogText);
+        logView.setTypeface(Typeface.MONOSPACE);
+        logView.setPadding(dp(12), dp(10), dp(12), dp(10));
+        GradientDrawable logBg = new GradientDrawable();
+        logBg.setColor(colorLogBg);
+        logBg.setCornerRadius(dp(12));
+        logView.setBackground(logBg);
+        logView.setMovementMethod(new ScrollingMovementMethod());
+        output.addView(logView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        root.addView(output, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        setContentView(root);
+        append("Root method is selected. Tap the button to continue.\n");
+    }
+
+    private LinearLayout buildAppBar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setBackgroundColor(colorPrimary);
+        bar.setElevation(dp(4));
+        bar.setPadding(dp(20), 0, dp(20), 0);
+
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(R.drawable.ic_launcher_foreground);
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams markLp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        markLp.rightMargin = dp(10);
+        bar.addView(mark, markLp);
+
+        LinearLayout titles = new LinearLayout(this);
+        titles.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = new TextView(this);
-        title.setText("LyanoPatchInstaller V2");
-        title.setTextSize(20);
-        title.setTextColor(0xFFECF0F1);
-        header.addView(title);
+        title.setText("LyanoPatchInstaller");
+        title.setTextSize(19);
+        title.setTextColor(0xFFFFFFFF);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        titles.addView(title);
 
-        TextView desc = new TextView(this);
-        desc.setText("\u2022 Root: replaces the system Play Store and reboots.\n"
-                + "\u2022 No root: installs a second store (com.lyano.playstore.patch) "
-                + "next to the existing one.");
-        desc.setTextSize(14);
-        desc.setTextColor(0xFF9AA7AD);
-        desc.setPadding(0, dp(4), 0, 0);
-        header.addView(desc);
+        TextView subtitle = new TextView(this);
+        subtitle.setText("V2.8  \u00b7  PLAY STORE SWAPPER");
+        subtitle.setTextSize(11);
+        subtitle.setTextColor(0xFFB7E4D0);
+        subtitle.setLetterSpacing(0.12f);
+        subtitle.setPadding(0, dp(1), 0, 0);
+        titles.addView(subtitle);
 
-        TextView device = new TextView(this);
-        device.setText("Device: Android " + Build.VERSION.RELEASE
-                + " (API " + Build.VERSION.SDK_INT + ")");
-        device.setTextSize(13);
-        device.setTextColor(0xFF7FD1A8);
-        device.setPadding(0, dp(4), 0, 0);
-        header.addView(device);
+        bar.addView(titles, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        return bar;
+    }
 
-        TextView pickMethod = new TextView(this);
-        pickMethod.setText("Install method:");
-        pickMethod.setTextSize(14);
-        pickMethod.setTextColor(0xFFECF0F1);
-        pickMethod.setPadding(0, dp(12), 0, dp(2));
-        header.addView(pickMethod);
+    private LinearLayout buildMethodCard() {
+        LinearLayout card = card();
+        card.addView(overline("Install method"));
 
         methodGroup = new RadioGroup(this);
         methodGroup.setOrientation(RadioGroup.VERTICAL);
-        final String[] methods = {
-                "Root - replace system Play Store (reboot)",
-                "No root - install as second store"
+        String[] titles = {"Root install", "No-root install"};
+        String[] details = {
+                "Replaces the system Play Store, then reboots.",
+                "Adds a second store next to the existing one."
         };
-        for (int i = 0; i < methods.length; i++) {
-            RadioButton rb = new RadioButton(this);
-            rb.setId(100 + i);
-            rb.setText(methods[i]);
-            rb.setTextColor(0xFFD5DDE0);
-            methodGroup.addView(rb);
+        for (int i = 0; i < titles.length; i++) {
+            RadioButton rb = option(100 + i, titles[i], details[i]);
+            methodGroup.addView(rb, rowParams());
         }
         ((RadioButton) methodGroup.getChildAt(0)).setChecked(true);
         methodGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
@@ -101,32 +192,30 @@ public class MainActivity extends Activity {
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 rootMethod = checkedId == 100;
                 goButton.setText(rootMethod ? "Replace Play Store & Reboot" : "Install Second Play Store");
-                append("Method: " + methods[checkedId - 100] + "\n");
+                append("Method: " + (rootMethod
+                        ? "Root - replace system Play Store"
+                        : "No root - second store") + "\n");
             }
         });
-        header.addView(methodGroup);
+        card.addView(methodGroup);
+        return card;
+    }
 
-        TextView pick = new TextView(this);
-        pick.setText("Patched Play Store build (minimum Android version):");
-        pick.setTextSize(14);
-        pick.setTextColor(0xFFECF0F1);
-        pick.setPadding(0, dp(12), 0, dp(2));
-        header.addView(pick);
+    private LinearLayout buildVersionCard() {
+        LinearLayout card = card();
+        card.addView(overline("Play Store build"));
 
         versionGroup = new RadioGroup(this);
         versionGroup.setOrientation(RadioGroup.VERTICAL);
         final String[] versions = {"5.12.10", "4.4.22", "3.4.7"};
         final String[] versionInfo = {
-                "min Android 2.3  \u00b7  2015  (newest)",
-                "min Android 2.2  \u00b7  2013  (older)",
-                "min Android 2.2  \u00b7  2012  (oldest)"
+                "Minimum Android 2.3  \u00b7  2015  \u00b7  newest",
+                "Minimum Android 2.2  \u00b7  2013  \u00b7  older",
+                "Minimum Android 2.2  \u00b7  2012  \u00b7  oldest"
         };
         for (int i = 0; i < versions.length; i++) {
-            RadioButton rb = new RadioButton(this);
-            rb.setId(i + 1);
-            rb.setText(versions[i] + "  \u2014  " + versionInfo[i]);
-            rb.setTextColor(0xFFD5DDE0);
-            versionGroup.addView(rb);
+            RadioButton rb = option(i + 1, versions[i], versionInfo[i]);
+            versionGroup.addView(rb, rowParams());
         }
         ((RadioButton) versionGroup.getChildAt(0)).setChecked(true);
         versionGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
@@ -136,50 +225,125 @@ public class MainActivity extends Activity {
                 append("Selected build: Play Store " + selectedVersion + "\n");
             }
         });
-        header.addView(versionGroup);
+        card.addView(versionGroup);
+        return card;
+    }
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(header);
-        LinearLayout.LayoutParams scrollLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f);
-        root.addView(scroll, scrollLp);
+    private LinearLayout buildDeviceCard() {
+        LinearLayout card = card();
+        card.addView(overline("This device"));
 
-        goButton = new Button(this);
-        goButton.setText("Replace Play Store & Reboot");
-        goButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                begin();
-            }
-        });
-        LinearLayout.LayoutParams goLp = new LinearLayout.LayoutParams(
+        TextView device = new TextView(this);
+        device.setText("Android " + Build.VERSION.RELEASE + "  \u00b7  API " + Build.VERSION.SDK_INT);
+        device.setTextSize(14);
+        device.setTextColor(colorText);
+        device.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        card.addView(device);
+
+        TextView note = new TextView(this);
+        note.setText("Unofficial helper. Root remounts /system and wipes the stock Play Store data; "
+                + "the no-root clone cannot install or update other apps.");
+        note.setTextSize(12);
+        note.setTextColor(colorSecondary);
+        note.setLineSpacing(dp(2), 1f);
+        note.setPadding(0, dp(4), 0, dp(4));
+        card.addView(note);
+        return card;
+    }
+
+    private LinearLayout card() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(colorSurface);
+        bg.setCornerRadius(dp(16));
+        card.setBackground(bg);
+        card.setElevation(dp(1));
+        card.setPadding(dp(16), dp(14), dp(16), dp(10));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        goLp.topMargin = dp(12);
-        root.addView(goButton, goLp);
+        lp.bottomMargin = dp(12);
+        card.setLayoutParams(lp);
+        return card;
+    }
 
-        logView = new TextView(this);
-        logView.setTextSize(12);
-        logView.setTextColor(0xFF7FD1A8);
-        logView.setTypeface(Typeface.MONOSPACE);
-        logView.setBackgroundColor(0xFF07090B);
-        logView.setPadding(dp(8), dp(8), dp(8), dp(8));
-        logView.setMovementMethod(new ScrollingMovementMethod());
-        LinearLayout.LayoutParams logLp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        logLp.topMargin = dp(12);
-        logLp.bottomMargin = dp(12);
-        root.addView(logView, logLp);
+    private TextView overline(String text) {
+        TextView label = new TextView(this);
+        label.setText(text);
+        label.setAllCaps(true);
+        label.setTextSize(11);
+        label.setLetterSpacing(0.12f);
+        label.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        label.setTextColor(colorPrimary);
+        label.setPadding(dp(2), 0, 0, dp(6));
+        return label;
+    }
 
-        setContentView(root);
-        append("Root method is selected. Tap the button to continue.\n");
+    private RadioButton option(int id, String title, String detail) {
+        RadioButton rb = new RadioButton(this);
+        rb.setId(id);
+
+        SpannableStringBuilder text = new SpannableStringBuilder();
+        text.append(title);
+        text.setSpan(new StyleSpan(Typeface.BOLD), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new AbsoluteSizeSpan(15, true), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(colorText), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.append("\n");
+        int start = text.length();
+        text.append(detail);
+        text.setSpan(new AbsoluteSizeSpan(13, true), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(colorSecondary), start, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        rb.setText(text);
+
+        rb.setLineSpacing(dp(1), 1f);
+        rb.setPadding(dp(12), dp(10), dp(12), dp(10));
+        rb.setButtonTintList(new ColorStateList(
+                new int[][]{{android.R.attr.state_checked}, {}},
+                new int[]{colorPrimary, UNCHECKED_CONTROL}));
+
+        GradientDrawable row = new GradientDrawable();
+        row.setCornerRadius(dp(10));
+        row.setColor(new ColorStateList(
+                new int[][]{{android.R.attr.state_checked}, {}},
+                new int[]{colorSelected, 0x00000000}));
+        rb.setBackground(new RippleDrawable(ColorStateList.valueOf(RIPPLE_LIGHT), row, null));
+        return rb;
+    }
+
+    private LinearLayout.LayoutParams rowParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(2);
+        return lp;
+    }
+
+    private Button buildPrimaryButton() {
+        Button button = new Button(this);
+        button.setText("Replace Play Store & Reboot");
+        button.setAllCaps(false);
+        button.setTextSize(15);
+        button.setLetterSpacing(0.02f);
+        button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        button.setTextColor(new ColorStateList(
+                new int[][]{{-android.R.attr.state_enabled}, {}},
+                new int[]{DISABLED_TEXT, 0xFFFFFFFF}));
+        button.setMinHeight(dp(48));
+        button.setPadding(dp(24), dp(10), dp(24), dp(10));
+        button.setElevation(dp(2));
+        button.setStateListAnimator(null);
+
+        GradientDrawable fill = new GradientDrawable();
+        fill.setColor(colorPrimary);
+        fill.setCornerRadius(dp(24));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(RIPPLE_ON_PRIMARY), fill, null));
+        return button;
     }
 
     private void begin() {
         final String version = selectedVersion;
         final boolean useRoot = rootMethod;
         goButton.setEnabled(false);
-        versionGroup.setEnabled(false);
-        methodGroup.setEnabled(false);
+        setOptionsEnabled(false);
         append("\nPreparing bundled APK (Play Store " + version + ")...\n");
         new Thread(new Runnable() {
             @Override
@@ -342,10 +506,21 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 goButton.setEnabled(true);
-                versionGroup.setEnabled(true);
-                methodGroup.setEnabled(true);
+                setOptionsEnabled(true);
             }
         });
+    }
+
+    private void setOptionsEnabled(boolean enabled) {
+        float alpha = enabled ? 1f : 0.45f;
+        methodGroup.setAlpha(alpha);
+        versionGroup.setAlpha(alpha);
+        for (int i = 0; i < methodGroup.getChildCount(); i++) {
+            methodGroup.getChildAt(i).setEnabled(enabled);
+        }
+        for (int i = 0; i < versionGroup.getChildCount(); i++) {
+            versionGroup.getChildAt(i).setEnabled(enabled);
+        }
     }
 
     private int dp(int value) {
